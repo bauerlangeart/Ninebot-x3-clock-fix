@@ -141,8 +141,8 @@ await test('handshake + read against simulated scooter', async () => {
         setPwdCount += 1;
         if (setPwdCount < 3) return;
         password = f.data;
+        dev.setKey(password, auth); // answers already with the new key
         await reply(resp(CMD.SET_PWD, 1));
-        dev.setKey(password, auth);
       } else if (f.cmd === CMD.AUTH) {
         assert.equal(b2h(f.data), b2h(serial));
         await reply(resp(CMD.AUTH, 1));
