@@ -61,11 +61,20 @@ und werden über Sync-Bytes und Längenfeld zusammengesetzt.
 neuer Kopplung, Roller verlangt Tastendruck) → `AUTH 0x5D`. Schlüssel ist anfangs
 der Bluetooth-Name (= Seriennummer). Details in `lib/nb-protocol.js`.
 
+Beobachtungen am Max G3 (BLE 0.4.5, mit SHU-tauglicher VCU-Firmware):
+- Er bietet den Ninebot- **und** den Nordic-UART-Dienst an, antwortet aber nur
+  über **Nordic UART**.
+- Variante „gen2“: Sync `5A A5`, PRE_COMM mit Schlüssel SHA-1(Name ‖ FW_DATA).
+- Der erste Frame im SN-Modus trägt **Zähler 3** (nicht 2 wie in der E125S-Doku).
+  SET_PWD wird alle 0,5 s wiederholt, bis der Roller `index 0` (wartet auf
+  Tastendruck) meldet; nach dem Druck auf die Power-Taste folgt `index 1`.
+- Einstellungen und Seriennummer liest SHU von der **VCU `0x16`**.
+
 **Zeitzone**
 
 | Feld | Wert |
 |------|------|
-| Board | Doku: DIS `0x01`. Beim Max G3 heißt das Dashboard laut Board-Map der App `tft` = **`0x23`**; es gibt dort kein Board `0x01`. Die Seite probiert `0x23`, dann `0x01`. |
+| Board | Doku: DIS `0x01` (E-Serie). Der Max G3 hat kein Board `0x01`; die Seite probiert VCU `0x16`, Dashboard `0x23`, dann `0x01`. |
 | Register | `0x86` (134), 2 Bytes, Little Endian |
 | Lesen | `5A A5 01 3E <board> 01 86 02` (Klartext vor Verschlüsselung) |
 | Schreiben | `5A A5 02 3E <board> 03 86 <lo> <hi>` (`WRITE_NR`, wie die offizielle App bei Einstellungen) |

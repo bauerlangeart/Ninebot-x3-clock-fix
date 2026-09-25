@@ -6,18 +6,20 @@ import { BleTransport, isSupported } from './lib/ble-transport.js';
 import { NbSession, CMD, hex } from './lib/nb-protocol.js';
 import { analyse, encodeRaw, utcOffsetMinutes } from './lib/timezone.js';
 
-// The timezone register is documented as DIS (0x01) index 134. The Max G3
-// has no board 0x01 in the official app's board map; its dashboard is "tft"
-// (0x23). Both are tried with a harmless read; writing uses the board that
-// answered.
+// The timezone register is documented as DIS (0x01) index 134 (E-series).
+// The Max G3 has no board 0x01; SHU reads its settings from the VCU (0x16),
+// the dashboard is "tft" (0x23). All are tried with a harmless read; writing
+// uses the board that answered.
 const TZ_INDEX = 0x86;
 const TZ_BOARDS = [
+  // SHU reads the serial number and settings of a Max G3 from the VCU (0x16).
+  { id: 0x16, name: 'Steuergerät (vcu, 0x16)' },
   { id: 0x23, name: 'Dashboard (tft, 0x23)' },
   { id: 0x01, name: 'Dashboard (dis, 0x01)' },
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '8';
+const APP_VERSION = '9';
 
 const $ = (id) => document.getElementById(id);
 const els = {
