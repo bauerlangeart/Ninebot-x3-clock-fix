@@ -6,7 +6,7 @@ App gekoppelt wurden (z. B. nur über SHU) und deshalb noch mit der werksseitige
 China-Zeitzone (UTC+8) laufen: Die Uhr geht dann in Deutschland 6 Stunden (Sommer)
 bzw. 7 Stunden (Winter) vor.
 
-**Direkt benutzen:** <https://bauerlangeart.github.io/ninebot-x3-clock-fix/>
+**Direkt benutzen:** <https://bauerlangeart.github.io/Ninebot-x3-clock-fix/>
 (in Chrome oder Edge öffnen)
 
 > **Status:** Die Software ist fertig und gegen den Python-Referenzclient sowie einen
