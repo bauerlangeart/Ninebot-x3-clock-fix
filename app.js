@@ -19,7 +19,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '11';
+const APP_VERSION = '12';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -29,6 +29,7 @@ const els = {
   write: $('btn-write'),
   test: $('btn-test'),
   diag: $('btn-diag'),
+  scan: $('btn-scan'),
   logBox: $('log-box'),
   forget: $('btn-forget'),
   copyLog: $('btn-copy-log'),
@@ -94,6 +95,7 @@ function refreshButtons() {
   els.connect.disabled = busy || !isSupported();
   els.read.disabled = !connected || busy;
   els.test.disabled = !connected || busy;
+  els.scan.disabled = !connected || busy;
   els.write.disabled = !connected || busy || !pendingWrite;
   setStepEnabled('step-read', connected);
   setStepEnabled('step-write', connected && !!pendingWrite);
@@ -366,6 +368,74 @@ els.diag.addEventListener('click', () => run(async () => {
     setStatus('status-connect', 'Diagnose fertig – bitte „Protokoll kopieren“ und schicken.', 'ok');
   } catch (e) {
     log('FEHLER', `Diagnose: ${explain(e)}`);
+  }
+}));
+
+// ---- register scan --------------------------------------------------------
+
+// Read-only sweep over all 256 registers of the boards that may hold the
+// clock settings. Flags values that look like UTC+8 in one of the candidate
+// encodings, or like a current Unix timestamp.
+const SCAN_BOARDS = [
+  { id: 0x16, name: 'vcu 0x16' },
+  { id: 0x23, name: 'tft 0x23' },
+];
+
+function scanCandidates(data) {
+  const notes = [];
+  if (data.length >= 2) {
+    const a = analyse(data.slice(0, 2), Number(els.shift.value) || 6, utcOffsetMinutes(TIME_ZONE));
+    for (const m of a.matches) notes.push(`Zeitzone? (${m.label})`);
+  }
+  if (data.length >= 4) {
+    const u32 = (data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24)) >>> 0;
+    const now = Math.floor(Date.now() / 1000);
+    for (const [label, off] of [['UTC', 0], ['UTC+2', 7200], ['UTC+8', 28800]]) {
+      if (Math.abs(u32 - (now + off)) < 3 * 86400) notes.push(`Zeitstempel? (${label}: ${new Date((u32 - off) * 1000).toISOString()})`);
+    }
+  }
+  return notes;
+}
+
+async function scanRegisters() {
+  const quietLog = session.log;
+  const found = [];
+  try {
+    for (const b of SCAN_BOARDS) {
+      log('SCAN', `Starte ${b.name} (256 Register) …`);
+      session.log = () => {};
+      let answered = 0;
+      for (let idx = 0; idx < 256; idx++) {
+        let data;
+        try {
+          data = await session.readRegister(b.id, idx, 4, { timeoutMs: 400, tries: 1 });
+        } catch {
+          continue;
+        }
+        answered += 1;
+        const notes = scanCandidates(data);
+        const line = `${b.name} 0x${idx.toString(16).padStart(2, '0').toUpperCase()}: ${hex(data)}${notes.length ? `  ← ${notes.join(', ')}` : ''}`;
+        found.push(line);
+        if (notes.length) log('KANDIDAT', line);
+        if (idx % 32 === 31) setStatus('status-read', `Scan ${b.name}: ${idx + 1}/256 …`);
+      }
+      session.log = quietLog;
+      log('SCAN', `${b.name}: ${answered} Register haben geantwortet`);
+    }
+  } finally {
+    session.log = quietLog;
+  }
+  log('SCAN', `Alle Antworten:\n${found.join('\n')}`);
+}
+
+els.scan.addEventListener('click', () => run(async () => {
+  els.logBox.open = true;
+  try {
+    await scanRegisters();
+    setStatus('status-read', 'Scan fertig – bitte „Protokoll kopieren“ und schicken.', 'ok');
+  } catch (e) {
+    log('FEHLER', `Scan: ${explain(e)}`);
+    setStatus('status-read', `Scan abgebrochen: ${explain(e)}`, 'error');
   }
 }));
 
