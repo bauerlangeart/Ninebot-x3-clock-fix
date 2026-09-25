@@ -17,7 +17,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '6';
+const APP_VERSION = '7';
 
 const $ = (id) => document.getElementById(id);
 const els = {

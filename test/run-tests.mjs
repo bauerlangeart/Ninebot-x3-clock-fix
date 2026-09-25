@@ -109,7 +109,7 @@ await test('Europe/Berlin offset', () => {
 });
 
 // End-to-end: our handshake against a simulated scooter built from the same crypto.
-await test('handshake + read against simulated scooter', async () => {
+async function simulate(mode) {
   const name = new TextEncoder().encode('TESTDEVICE0001');
   const serial = new TextEncoder().encode('TESTDEVICE0001');
   const auth = new Uint8Array(16).fill(7);
@@ -141,6 +141,17 @@ await test('handshake + read against simulated scooter', async () => {
         setPwdCount += 1;
         if (setPwdCount < 3) return;
         password = f.data;
+        if (mode === 'unknown-key-reply') {
+          // Answer with a key the app cannot know, then expect AUTH.
+          const other = new NbCrypto(variant.ecbInput);
+          other.setKey(new Uint8Array(16).fill(0x42), auth);
+          other.setAuthParam(auth);
+          other.counter = dev.counter;
+          inbox.push(await other.encrypt(resp(CMD.SET_PWD, 1)));
+          dev.counter = other.counter;
+          dev.setKey(password, auth);
+          return;
+        }
         dev.setKey(password, auth); // answers already with the new key
         await reply(resp(CMD.SET_PWD, 1));
       } else if (f.cmd === CMD.AUTH) {
@@ -164,6 +175,10 @@ await test('handshake + read against simulated scooter', async () => {
   assert.equal(b2h(res.password), b2h(password));
   assert.equal(setPwdCount, 3);
   assert.equal(b2h(await s.readRegister(0x23, 0x86, 2)), '0800');
-});
+}
+
+await test('handshake + read against simulated scooter', () => simulate('new-key-reply'));
+await test('handshake when the SET_PWD answer uses an unknown key', () => simulate('unknown-key-reply'));
+
 
 console.log(`\n${passed} Tests bestanden${process.exitCode ? ', FEHLER vorhanden' : ''}`);
