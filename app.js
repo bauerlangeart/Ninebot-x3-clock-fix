@@ -25,6 +25,8 @@ const els = {
   read: $('btn-read'),
   write: $('btn-write'),
   test: $('btn-test'),
+  diag: $('btn-diag'),
+  logBox: $('log-box'),
   forget: $('btn-forget'),
   copyLog: $('btn-copy-log'),
   name: $('in-name'),
@@ -64,7 +66,7 @@ function logFrame(dir, plain, enc) {
     shown = plain.slice(0, 7);
     return log(dir, hex(shown), '+ [Passwort ausgeblendet]');
   }
-  log(dir, hex(shown), enc ? `(verschlüsselt ${enc.length} B)` : '');
+  log(dir, hex(shown), enc ? `→ ${hex(enc)}` : '');
 }
 
 function storage(fn) {
@@ -80,9 +82,11 @@ function setStepEnabled(sectionId, on) {
 }
 
 function refreshButtons() {
-  const connected = !!session && transport?.connected;
-  els.connect.hidden = connected;
-  els.disconnect.hidden = !connected;
+  const linked = !!transport?.connected;
+  const connected = !!session && linked;
+  els.connect.hidden = linked;
+  els.disconnect.hidden = !linked;
+  els.diag.disabled = !linked || busy;
   els.connect.disabled = busy || !isSupported();
   els.read.disabled = !connected || busy;
   els.test.disabled = !connected || busy;
@@ -118,6 +122,7 @@ async function connect() {
   pendingWrite = null;
   els.readResult.hidden = true;
   transport = new BleTransport();
+  transport.onLog = (dir, msg) => log(dir, msg);
   transport.onDisconnect = () => {
     log('INFO', 'Verbindung getrennt');
     session = null;
@@ -163,15 +168,22 @@ els.connect.addEventListener('click', () => run(async () => {
       storage((s) => s.removeItem(pwdKey(els.name.value.trim())));
       msg += ' Die gespeicherte Kopplung wurde zurückgesetzt – bitte noch einmal verbinden.';
     }
+    if (transport?.connected) {
+      msg += transport.rawCount
+        ? ` Es kamen ${transport.rawCount} unbekannte Nachrichten an (siehe Protokoll).`
+        : ' Es kam keine einzige Nachricht vom Roller zurück.';
+      msg += ' Die Bluetooth-Verbindung bleibt offen: Unten „Diagnose starten“ antippen und danach das Protokoll schicken.';
+      els.logBox.open = true;
+    }
     log('FEHLER', msg);
     setStatus('status-connect', msg, 'error');
     session = null;
-    transport?.disconnect();
   }
 }));
 
 els.disconnect.addEventListener('click', () => {
   transport?.disconnect();
+  transport = null;
   session = null;
   pendingWrite = null;
   refreshButtons();
@@ -283,6 +295,49 @@ els.write.addEventListener('click', () => run(async () => {
   } catch (e) {
     setStatus('status-write', explain(e), 'error');
     log('FEHLER', explain(e));
+  }
+}));
+
+// ---- diagnose -------------------------------------------------------------
+
+// Read-only probes in the older, unencrypted Ninebot frame formats. Custom
+// firmware may speak one of these instead of Encryption2. All of them only
+// ask for the serial number (register 0x10); nothing is written.
+function plainFrame(bytes) {
+  let sum = 0;
+  for (const b of bytes.slice(2)) sum += b;
+  const cs = ~sum & 0xffff;
+  return new Uint8Array([...bytes, cs & 0xff, cs >> 8]);
+}
+
+const PROBES = [
+  { label: '5A A5 unverschlüsselt, Board 0x20, App-ID 0x3E', frame: [0x5a, 0xa5, 0x01, 0x3e, 0x20, 0x01, 0x10, 0x0e] },
+  { label: '5A A5 unverschlüsselt, Board 0x20, App-ID 0x3D', frame: [0x5a, 0xa5, 0x01, 0x3d, 0x20, 0x01, 0x10, 0x0e] },
+  { label: '5A A5 unverschlüsselt, Board 0x02 (G3-MCU)', frame: [0x5a, 0xa5, 0x01, 0x3e, 0x02, 0x01, 0x10, 0x0e] },
+  { label: '5A A5 unverschlüsselt, Board 0x23 (G3-Dashboard)', frame: [0x5a, 0xa5, 0x01, 0x3e, 0x23, 0x01, 0x10, 0x0e] },
+  { label: '55 AA (Protokoll 1), Board 0x20', frame: [0x55, 0xaa, 0x03, 0x20, 0x01, 0x10, 0x0e] },
+];
+
+async function diagnose() {
+  log('DIAG', `Start. Bisher empfangene Rohnachrichten: ${transport.rawCount}`);
+  for (const p of PROBES) {
+    const f = plainFrame(p.frame);
+    const before = transport.rawCount;
+    log('DIAG', `${p.label}: TX ${hex(f)}`);
+    transport.flush();
+    await transport.send(f);
+    await new Promise((r) => setTimeout(r, 2500));
+    log('DIAG', transport.rawCount > before ? `→ ${transport.rawCount - before} Antwort(en)` : '→ keine Antwort');
+  }
+  log('DIAG', `Ende. Empfangene Rohnachrichten insgesamt: ${transport.rawCount}`);
+}
+
+els.diag.addEventListener('click', () => run(async () => {
+  try {
+    await diagnose();
+    setStatus('status-connect', 'Diagnose fertig – bitte „Protokoll kopieren“ und schicken.', 'ok');
+  } catch (e) {
+    log('FEHLER', `Diagnose: ${explain(e)}`);
   }
 }));
 
