@@ -17,7 +17,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '7';
+const APP_VERSION = '8';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -31,6 +31,7 @@ const els = {
   forget: $('btn-forget'),
   copyLog: $('btn-copy-log'),
   name: $('in-name'),
+  pwd: $('in-pwd'),
   shift: $('in-shift'),
   pressButton: $('press-button'),
   readResult: $('read-result'),
@@ -142,7 +143,12 @@ async function connect() {
   els.name.value = name;
   log('INFO', `Gerätename (Schlüssel): ${name}`);
 
-  const stored = storage((s) => s.getItem(pwdKey(name)));
+  const manual = els.pwd.value.replace(/[^0-9a-f]/gi, '');
+  if (manual && manual.length !== 32) {
+    throw new Error('Das Kopplungs-Passwort muss genau 32 Hex-Zeichen lang sein.');
+  }
+  const stored = manual || storage((s) => s.getItem(pwdKey(name)));
+  if (manual) log('INFO', 'Verwende eingetragenes Kopplungs-Passwort');
   session = new NbSession(transport, { log: logFrame });
   setStatus('status-connect', 'Anmeldung am Roller …');
   let res = null;
