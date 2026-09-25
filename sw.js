@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Caches the app shell so the tool works offline after the first visit.
 // Bump VERSION whenever a cached file changes.
-const VERSION = 'g3d-clock-fix-v2';
+const VERSION = 'g3d-clock-fix-v3';
 const FILES = [
   './',
   'index.html',

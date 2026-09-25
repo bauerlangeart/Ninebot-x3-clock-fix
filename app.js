@@ -133,7 +133,7 @@ async function connect() {
   const device = await transport.requestDevice();
   setStatus('status-connect', `Verbinde mit „${device.name || 'Gerät'}“ …`);
   await transport.connect();
-  log('INFO', `GATT verbunden, Dienst ${transport.serviceUuid}`);
+  log('INFO', `GATT verbunden, Kanäle: ${transport.channels.map((c) => c.name).join(', ')}`);
 
   const name = els.name.value.trim() || await transport.readDeviceName();
   if (!name) throw new Error('Gerätename unbekannt. Bitte unter „Erweitert“ die Seriennummer eintragen.');
@@ -143,13 +143,27 @@ async function connect() {
   const stored = storage((s) => s.getItem(pwdKey(name)));
   session = new NbSession(transport, { log: logFrame });
   setStatus('status-connect', 'Anmeldung am Roller …');
-  const res = await session.handshake(new TextEncoder().encode(name), {
-    storedPassword: stored ? hexToBytes(stored) : null,
-    onButtonPress: () => {
-      els.pressButton.hidden = false;
-      setStatus('status-connect', 'Warte auf Bestätigung am Roller …');
-    },
-  });
+  let res = null;
+  let lastError = null;
+  for (let i = 0; i < transport.channels.length && !res; i++) {
+    transport.useChannel(i);
+    log('INFO', `Versuche Kanal ${transport.channel.name}`);
+    try {
+      res = await session.handshake(new TextEncoder().encode(name), {
+        storedPassword: stored ? hexToBytes(stored) : null,
+        onButtonPress: () => {
+          els.pressButton.hidden = false;
+          setStatus('status-connect', 'Warte auf Bestätigung am Roller …');
+        },
+      });
+    } catch (e) {
+      lastError = e;
+      // Only "no answer at all" is worth retrying on the next channel.
+      if (e?.code !== 'PRE_COMM' || transport.rawCount) throw e;
+    }
+  }
+  if (!res) throw lastError;
+  log('INFO', `Kanal ${transport.channel.name} funktioniert`);
   els.pressButton.hidden = true;
   serial = res.serial;
   storage((s) => s.setItem(pwdKey(name), bytesToHex(res.password)));
@@ -320,15 +334,19 @@ const PROBES = [
 
 async function diagnose() {
   log('DIAG', `Start. Bisher empfangene Rohnachrichten: ${transport.rawCount}`);
-  for (const p of PROBES) {
-    const f = plainFrame(p.frame);
-    const before = transport.rawCount;
-    log('DIAG', `${p.label}: TX ${hex(f)}`);
-    transport.flush();
-    await transport.send(f);
-    await new Promise((r) => setTimeout(r, 2500));
-    log('DIAG', transport.rawCount > before ? `→ ${transport.rawCount - before} Antwort(en)` : '→ keine Antwort');
+  for (let i = 0; i < transport.channels.length; i++) {
+    transport.useChannel(i);
+    for (const p of PROBES) {
+      const f = plainFrame(p.frame);
+      const before = transport.rawCount;
+      log('DIAG', `[${transport.channel.name}] ${p.label}: TX ${hex(f)}`);
+      transport.flush();
+      await transport.send(f);
+      await new Promise((r) => setTimeout(r, 2000));
+      log('DIAG', transport.rawCount > before ? `→ ${transport.rawCount - before} Antwort(en)` : '→ keine Antwort');
+    }
   }
+  transport.useChannel(0);
   log('DIAG', `Ende. Empfangene Rohnachrichten insgesamt: ${transport.rawCount}`);
 }
 
