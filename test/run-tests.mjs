@@ -116,6 +116,7 @@ await test('handshake + read against simulated scooter', async () => {
   const variant = VARIANTS.gen2;
   const dev = new NbCrypto(variant.ecbInput);
   let password = null;
+  let setPwdCount = 0;
   const inbox = [];
   const reply = async (plain) => inbox.push(await dev.encrypt(plain));
   const resp = (cmd, index, data = []) => new Uint8Array([0x5a, 0xa5, data.length, 0x04, 0x3e, cmd, index, ...data]);
@@ -136,9 +137,11 @@ await test('handshake + read against simulated scooter', async () => {
       assert.ok(ok, 'MAC ok on device side');
       const f = { cmd: plain[5], index: plain[6], data: plain.slice(7) };
       if (f.cmd === CMD.SET_PWD) {
+        // Silent until the "button" is pressed, like the real scooter.
+        setPwdCount += 1;
+        if (setPwdCount < 3) return;
         password = f.data;
-        await reply(resp(CMD.SET_PWD, 0));
-        await reply(resp(CMD.SET_PWD, 1)); // user pressed the button
+        await reply(resp(CMD.SET_PWD, 1));
         dev.setKey(password, auth);
       } else if (f.cmd === CMD.AUTH) {
         assert.equal(b2h(f.data), b2h(serial));
@@ -159,6 +162,7 @@ await test('handshake + read against simulated scooter', async () => {
   assert.equal(res.variant, 'gen2');
   assert.ok(pressed);
   assert.equal(b2h(res.password), b2h(password));
+  assert.equal(setPwdCount, 3);
   assert.equal(b2h(await s.readRegister(0x23, 0x86, 2)), '0800');
 });
 
