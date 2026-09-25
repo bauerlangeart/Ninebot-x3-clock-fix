@@ -1,0 +1,71 @@
+{
+ "derive_key": [
+  {
+   "k1": "5445535444455649434530303031",
+   "k2": null,
+   "out": "4d631a0ea0d182f78b084f5d2d062ab3"
+  },
+  {
+   "k1": "5445535444455649434530303031",
+   "k2": "97cfb802844143de56002b3b34780a5d",
+   "out": "cefa338b052ba289c68a9bb59aa4f0da"
+  },
+  {
+   "k1": "000102030405060708090a0b0c0d0e0f",
+   "k2": "101112131415161718191a1b1c1d1e1f",
+   "out": "ae5bd8efea5322c4d9986d06680a7813"
+  }
+ ],
+ "java_random": {
+  "seed": 12345,
+  "bytes16": "d6209f5c31b3618322a9d8ee7807c8ea"
+ },
+ "password": {
+  "auth": "80ff017f10203040a0b0c0d0e0f00506",
+  "time_ms": 1790000000123,
+  "out": "bead48d33f7683e04f1a807e6fd8e65f"
+ },
+ "non_sn": [
+  {
+   "gen": "gen2",
+   "plain": "5aa5003e045b00",
+   "enc": "5aa500e1748ab4000062ff0000"
+  },
+  {
+   "gen": "gen3",
+   "plain": "5ab5003e045b00",
+   "enc": "5ab50051304030000062ff0000"
+  }
+ ],
+ "sn_seq": {
+  "name": "5445535444455649434530303031",
+  "auth": "80ff017f10203040a0b0c0d0e0f00506",
+  "password": "bead48d33f7683e04f1a807e6fd8e65f",
+  "frames": [
+   {
+    "key1": "name",
+    "plain": "5aa5103e045c00bead48d33f7683e04f1a807e6fd8e65f",
+    "enc": "5aa510fba4e0f6f3e6ee0ebd8e9391c3faa7af934d9649ccf4196e0002"
+   },
+   {
+    "key1": "password",
+    "plain": "5aa50e3e045d005445535444455649434530303031",
+    "enc": "5aa50e7b6bd90a9425c4338a14b58f139a2303e4e9387c2ae90003"
+   },
+   {
+    "key1": "password",
+    "plain": "5aa5013e23018602",
+    "enc": "5aa50165f11e92b85347d3960004"
+   },
+   {
+    "key1": "password",
+    "plain": "5aa5023e2303860200",
+    "enc": "5aa502d3836b4abaed87fbbb350005"
+   }
+  ]
+ },
+ "sn_resp": {
+  "plain": "5aa502233e04860800",
+  "enc": "5aa50213f58acc30a95a022ccd0007"
+ }
+}

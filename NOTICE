@@ -1,0 +1,22 @@
+ninebot-x3-clock-fix
+Copyright (c) 2026 bauerlangeart
+
+This project contains files ported from segway-ninebot-ble-cli
+(https://codeberg.org/NootNooot/segway-ninebot-ble-cli):
+
+  lib/nb-crypto.js    <- nb_crypto.py
+  lib/nb-protocol.js  <- nb_protocol.py, segway_ble_client.py (handshake)
+
+segway-ninebot-ble-cli
+Copyright 2026 NootNooot
+
+These two files are licensed under the Apache License, Version 2.0
+(see LICENSE-APACHE). They were rewritten from Python to JavaScript.
+All other files are licensed under the MIT License (see LICENSE).
+
+This is an unofficial, independently developed implementation created
+through reverse engineering for interoperability purposes. It is not
+affiliated with, authorized by, endorsed by, or sponsored by Segway Inc.,
+Ninebot, or any related entity. "Segway" and "Ninebot" are trademarks of
+their respective owners and are used here only to identify the hardware
+this software interoperates with.

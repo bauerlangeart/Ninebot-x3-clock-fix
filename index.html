@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>G3D Uhr-Fix</title>
+  <meta name="description" content="Stellt die Zeitzone am Dashboard des Ninebot Max G3/G3D per Bluetooth ein - ohne offizielle App.">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>G3D Uhr-Fix</h1>
+    <p class="sub">Zeitzone am Dashboard des Ninebot Max G3 / G3D einstellen – per Bluetooth, ohne offizielle App.</p>
+  </header>
+
+  <main>
+    <section id="unsupported" class="card warn" hidden>
+      <h2>Dein Browser unterstützt kein Web Bluetooth</h2>
+      <p>Bitte öffne diese Seite in <strong>Chrome</strong> oder <strong>Edge</strong> auf Android oder am Computer.
+        Safari, Firefox und alle Browser auf dem iPhone funktionieren leider nicht.</p>
+    </section>
+
+    <section class="card" id="step-connect">
+      <h2><span class="num">1</span> Mit dem Roller verbinden</h2>
+      <ul class="hints">
+        <li>Roller einschalten und in der Nähe bleiben.</li>
+        <li>SHU und andere Roller-Apps vorher <strong>schließen</strong> – es ist nur eine Verbindung gleichzeitig möglich.</li>
+        <li>Im Auswahlfenster den Roller wählen (Name meist die Seriennummer oder „Ninebot…“).</li>
+      </ul>
+      <div class="row">
+        <button id="btn-connect" class="primary">Verbinden</button>
+        <button id="btn-disconnect" hidden>Trennen</button>
+      </div>
+      <div id="press-button" class="card attention" hidden>
+        <strong>Jetzt kurz die Power-Taste am Roller drücken</strong>
+        <p>Der Roller fragt einmalig nach einer Bestätigung für dieses Handy (du hast 60 Sekunden).</p>
+      </div>
+      <p id="status-connect" class="status" role="status"></p>
+      <details class="advanced">
+        <summary>Erweitert</summary>
+        <label>Gerätename / Seriennummer (Schlüssel für die Verschlüsselung)
+          <input id="in-name" autocomplete="off" spellcheck="false" placeholder="wird automatisch erkannt">
+        </label>
+        <p class="small">Nur ändern, wenn die Verbindung wegen eines falschen Namens abgelehnt wird.</p>
+        <button id="btn-forget" class="small-btn">Gespeicherte Kopplung vergessen</button>
+      </details>
+    </section>
+
+    <section class="card" id="step-read" aria-disabled="true">
+      <h2><span class="num">2</span> Zeitzone auslesen</h2>
+      <p>Liest den aktuellen Wert aus dem Dashboard. Dabei wird nichts verändert.</p>
+      <label>Die Uhr am Roller geht gerade um
+        <span class="inline"><input id="in-shift" type="number" step="1" value="6" inputmode="numeric"> Stunden <strong>vor</strong></span>
+      </label>
+      <p class="small">Bei nachgehender Uhr eine negative Zahl eintragen.</p>
+      <div class="row">
+        <button id="btn-read" class="primary" disabled>Zeitzone auslesen</button>
+      </div>
+      <p id="status-read" class="status" role="status"></p>
+      <dl id="read-result" class="result" hidden></dl>
+    </section>
+
+    <section class="card" id="step-write" aria-disabled="true">
+      <h2><span class="num">3</span> Zeitzone auf Deutschland setzen</h2>
+      <p id="target-info"></p>
+      <div class="row">
+        <button id="btn-write" class="primary" disabled>Auf Deutschland setzen</button>
+      </div>
+      <p id="status-write" class="status" role="status"></p>
+      <p class="small">Danach den Roller einmal aus- und wieder einschalten und die Uhr prüfen.
+        Zur Zeitumstellung (letzter Sonntag im März bzw. Oktober) diesen Schritt wiederholen –
+        ob das Dashboard die Sommerzeit selbst umstellt, ist noch nicht bekannt.</p>
+    </section>
+
+    <details class="card" id="log-box">
+      <summary>Protokoll für die Fehlersuche</summary>
+      <p class="small">Enthält die gesendeten und empfangenen Bytes. Bei Problemen kopieren und mitschicken.
+        Das Passwort wird darin nicht angezeigt.</p>
+      <div class="row">
+        <button id="btn-copy-log" class="small-btn">Protokoll kopieren</button>
+        <button id="btn-test" class="small-btn" disabled>Testlesen (Seriennummer)</button>
+      </div>
+      <pre id="log"></pre>
+    </details>
+  </main>
+
+  <footer>
+    <p>Inoffizielles Open-Source-Werkzeug, nicht verbunden mit Segway-Ninebot. Nutzung auf eigene Verantwortung und nur am eigenen Gerät.
+      Es wird ausschließlich das Zeitzonen-Register beschrieben. Keine Tracker, keine Server – alles läuft auf deinem Gerät.</p>
+    <p><a href="https://github.com/bauerlangeart/ninebot-x3-clock-fix">Quellcode &amp; Doku</a> · <span id="offline-state"></span></p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

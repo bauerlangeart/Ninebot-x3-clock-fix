@@ -1,0 +1,10 @@
+{
+  "name": "ninebot-x3-clock-fix",
+  "private": true,
+  "type": "module",
+  "description": "Web Bluetooth tool to set the dashboard timezone of the Ninebot Max G3/G3D",
+  "scripts": {
+    "test": "node test/run-tests.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}
