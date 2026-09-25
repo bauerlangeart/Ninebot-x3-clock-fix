@@ -19,7 +19,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '9';
+const APP_VERSION = '10';
 
 const $ = (id) => document.getElementById(id);
 const els = {
