@@ -17,6 +17,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
+const APP_VERSION = '4';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -133,6 +134,7 @@ async function connect() {
   const device = await transport.requestDevice();
   setStatus('status-connect', `Verbinde mit „${device.name || 'Gerät'}“ …`);
   await transport.connect();
+  log('INFO', `Version ${APP_VERSION}`);
   log('INFO', `GATT verbunden, Kanäle: ${transport.channels.map((c) => c.name).join(', ')}`);
 
   const name = els.name.value.trim() || await transport.readDeviceName();
@@ -389,7 +391,7 @@ refreshButtons();
 // Offline support: cache the app shell.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(
-    () => { $('offline-state').textContent = 'offline nutzbar'; },
-    () => { $('offline-state').textContent = ''; },
+    () => { $('offline-state').textContent = `Version ${APP_VERSION} · offline nutzbar`; },
+    () => { $('offline-state').textContent = `Version ${APP_VERSION}`; },
   );
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Caches the app shell so the tool works offline after the first visit.
 // Bump VERSION whenever a cached file changes.
-const VERSION = 'g3d-clock-fix-v3';
+const VERSION = 'g3d-clock-fix-v4';
 const FILES = [
   './',
   'index.html',
@@ -18,7 +18,7 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -33,7 +33,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    // 'no-cache' revalidates with the server instead of trusting the
+    // browser's HTTP cache (GitHub Pages allows 10 minutes of caching).
+    fetch(event.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(VERSION).then((c) => c.put(event.request, copy));
