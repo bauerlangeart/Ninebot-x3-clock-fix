@@ -19,7 +19,7 @@ const TZ_BOARDS = [
 ];
 const SN_INDEX = 0x10;
 const TIME_ZONE = 'Europe/Berlin';
-const APP_VERSION = '12';
+const APP_VERSION = '13';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -373,13 +373,10 @@ els.diag.addEventListener('click', () => run(async () => {
 
 // ---- register scan --------------------------------------------------------
 
-// Read-only sweep over all 256 registers of the boards that may hold the
-// clock settings. Flags values that look like UTC+8 in one of the candidate
-// encodings, or like a current Unix timestamp.
-const SCAN_BOARDS = [
-  { id: 0x16, name: 'vcu 0x16' },
-  { id: 0x23, name: 'tft 0x23' },
-];
+// Read-only search for the board that holds the clock settings: find all
+// boards that answer, then read all 256 registers of each. Flags values that
+// look like UTC+8 in one of the candidate encodings, or like a current Unix
+// timestamp.
 
 function scanCandidates(data) {
   const notes = [];
@@ -397,33 +394,58 @@ function scanCandidates(data) {
   return notes;
 }
 
+async function scanBoard(b, found) {
+  log('SCAN', `Starte ${b.name} (256 Register) …`);
+  let answered = 0;
+  for (let idx = 0; idx < 256; idx++) {
+    let data;
+    try {
+      data = await session.readRegister(b.id, idx, 4, { timeoutMs: 400, tries: 1 });
+    } catch {
+      continue;
+    }
+    answered += 1;
+    const notes = scanCandidates(data);
+    const line = `${b.name} 0x${idx.toString(16).padStart(2, '0').toUpperCase()}: ${hex(data)}${notes.length ? `  ← ${notes.join(', ')}` : ''}`;
+    found.push(line);
+    if (notes.length) log('KANDIDAT', line);
+    if (idx % 32 === 31) setStatus('status-read', `Scan ${b.name}: ${idx + 1}/256 …`);
+  }
+  log('SCAN', `${b.name}: ${answered} Register haben geantwortet`);
+}
+
+// Asks every possible board address for register 0x10 (serial number on the
+// known boards). Read-only; boards that do not exist simply do not answer.
+async function discoverBoards() {
+  const boards = [];
+  for (let id = 0; id < 256; id++) {
+    if (id % 32 === 0) setStatus('status-read', `Board-Suche: ${id}/256 …`);
+    try {
+      const d = await session.readRegister(id, 0x10, 2, { timeoutMs: 300, tries: 1 });
+      boards.push({ id, name: `board 0x${id.toString(16).padStart(2, '0').toUpperCase()}` });
+      log('BOARD', `0x${id.toString(16).padStart(2, '0').toUpperCase()} antwortet (${hex(d)})`);
+    } catch {
+      // no board at this address
+    }
+  }
+  return boards;
+}
+
 async function scanRegisters() {
-  const quietLog = session.log;
+  const sessionLog = session.log;
+  const transportLog = transport.onLog;
   const found = [];
   try {
-    for (const b of SCAN_BOARDS) {
-      log('SCAN', `Starte ${b.name} (256 Register) …`);
-      session.log = () => {};
-      let answered = 0;
-      for (let idx = 0; idx < 256; idx++) {
-        let data;
-        try {
-          data = await session.readRegister(b.id, idx, 4, { timeoutMs: 400, tries: 1 });
-        } catch {
-          continue;
-        }
-        answered += 1;
-        const notes = scanCandidates(data);
-        const line = `${b.name} 0x${idx.toString(16).padStart(2, '0').toUpperCase()}: ${hex(data)}${notes.length ? `  ← ${notes.join(', ')}` : ''}`;
-        found.push(line);
-        if (notes.length) log('KANDIDAT', line);
-        if (idx % 32 === 31) setStatus('status-read', `Scan ${b.name}: ${idx + 1}/256 …`);
-      }
-      session.log = quietLog;
-      log('SCAN', `${b.name}: ${answered} Register haben geantwortet`);
-    }
+    session.log = () => {};
+    transport.onLog = () => {};
+    log('SCAN', 'Board-Suche (alle 256 Adressen) …');
+    const boards = await discoverBoards();
+    log('SCAN', `Gefundene Boards: ${boards.map((b) => b.name).join(', ') || 'keine'}`);
+    // The VCU (0x16) was fully scanned before; skip it to save time.
+    for (const b of boards.filter((x) => x.id !== 0x16)) await scanBoard(b, found);
   } finally {
-    session.log = quietLog;
+    session.log = sessionLog;
+    transport.onLog = transportLog;
   }
   log('SCAN', `Alle Antworten:\n${found.join('\n')}`);
 }
