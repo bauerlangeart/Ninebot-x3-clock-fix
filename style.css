@@ -136,3 +136,4 @@ pre#log {
 
 footer { padding-bottom: 32px; font-size: 0.85rem; color: var(--muted); }
 footer a { color: var(--accent); }
+#status-note { margin: 0 0 16px; }
